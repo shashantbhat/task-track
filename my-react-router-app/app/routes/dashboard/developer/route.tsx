@@ -6,7 +6,7 @@ import DeveloperSidebar from "../components/side-bar";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router";
 
-const columns = ["Backlog", "To Do", "In Progress", "Under Review", "Done", "cancelled"];
+const columns = ["Backlog", "To Do", "In Progress", "Under Review", "Done", "Cancelled"];
 
 interface Task {
   id: string;
@@ -17,6 +17,7 @@ interface Task {
   priority: string;
   status: string;
   projectId: string;
+  requestedStatus?: string | null;
 }
 
 const filterFields = ["assignee", "priority", "status"];
@@ -28,7 +29,6 @@ const DeveloperDashboard = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
-  // Search & filter
   const [searchValue, setSearchValue] = useState("");
   const [showFilterPopover, setShowFilterPopover] = useState(false);
   const [filterField, setFilterField] = useState("assignee");
@@ -61,17 +61,36 @@ const DeveloperDashboard = () => {
   };
 
   const updateTask = (task: Task) => {
-    const newTasks = tasks.map((t) => (t.id === task.id ? task : t));
+    const oldTask = tasks.find((t) => t.id === task.id);
+    let updatedTask = { ...task };
+
+    if (oldTask && oldTask.status !== task.status) {
+      // Developer trying to mark task as Done or Cancelled
+      if (task.status === "Done" || task.status === "Cancelled") {
+        updatedTask = {
+          ...task,
+          status: "Under Review", // actual status shown to developer
+          requestedStatus: task.status, // store requested status for manager
+        };
+        alert(
+          `Your request to mark this task as "${task.status}" has been recorded and sent for review.`
+        );
+      }
+    }
+
+    const newTasks = tasks.map((t) => (t.id === task.id ? updatedTask : t));
     saveTasks(newTasks);
+  };
+
+  const deleteTask = (taskId: string | number) => {
+    const updatedTasks = tasks.filter((t) => t.id !== taskId);
+    saveTasks(updatedTasks);
   };
 
   const filteredTasks = tasks.filter((task) => {
     if (task.projectId !== currentProject?.id) return false;
 
-    // Filter by task name
     const matchesName = task.name.toLowerCase().includes(searchValue.toLowerCase());
-
-    // Filter by selected filter field if any
     let matchesFilter = true;
     if (filterValue) {
       const fieldValue = (task as any)[filterField]?.toLowerCase() || "";
@@ -91,14 +110,15 @@ const DeveloperDashboard = () => {
         ) : (
           <>
             <div className="flex justify-between">
-                <h1 className="text-3xl font-bold mb-6">{currentProject.name}</h1>
-                <Link
-                    to={"/"}
-                    className="flex text-md px-3 py-1.5 font-medium items-center max-w-30 max-h-8 bg-black text-white rounded-lg hover:opacity-90 transition"
-                >
-                    Log out
-                </Link>
+              <h1 className="text-3xl font-bold mb-6">{currentProject.name}</h1>
+              <Link
+                to={"/"}
+                className="flex text-md px-3 py-1.5 font-medium items-center max-w-30 max-h-8 bg-black text-white rounded-lg hover:opacity-90 transition"
+              >
+                Log out
+              </Link>
             </div>
+
             {/* Search bar */}
             <div className="relative mb-6">
               <input
@@ -160,6 +180,8 @@ const DeveloperDashboard = () => {
                         key={task.id}
                         task={task}
                         onEdit={() => setEditingTask(task)}
+                        onDelete={deleteTask}
+                        // Pass requestedStatus so it can show in red
                       />
                     ))}
                 </div>
@@ -172,6 +194,7 @@ const DeveloperDashboard = () => {
                 projectId={currentProject.id}
                 onClose={() => setShowModal(false)}
                 onAddTask={addTask}
+                // userRole="developer"
               />
             )}
             {editingTask && (
@@ -180,6 +203,7 @@ const DeveloperDashboard = () => {
                 onClose={() => setEditingTask(null)}
                 onAddTask={updateTask}
                 taskToEdit={editingTask}
+                // userRole="developer"
               />
             )}
           </>

@@ -104,6 +104,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
             <option>In Progress</option>
             <option>Under Review</option>
             <option>Done</option>
+            <option>Cancelled</option>
           </select>
           <button
             type="submit"
