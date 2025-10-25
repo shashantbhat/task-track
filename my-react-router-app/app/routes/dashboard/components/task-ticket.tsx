@@ -10,25 +10,35 @@ interface TaskTicketProps {
     dueDate: string;
     priority: string;
     status: string;
-    requestedStatus?: string | null; // optional requested status
+    requestedStatus?: string | null;
   };
   onEdit: (task: any) => void;
-  onDelete?: (taskId: string | number) => void; // optional delete function
+  onDelete?: (taskId: string | number) => void;
 }
 
 const TaskCard: React.FC<TaskTicketProps> = ({ task, onEdit, onDelete }) => {
+  // Determine border color based on priority
+  const borderColor =
+    task.priority === "Low"
+      ? "border-green-500"
+      : task.priority === "Medium"
+      ? "border-yellow-500"
+      : task.priority === "High"
+      ? "border-red-500"
+      : "border-blue-500"; // default
+
   return (
-    <div className="bg-white p-4 rounded-lg shadow mb-4 border-l-4 border-blue-500 relative">
-      <h3 className="font-semibold">{task.name}</h3>
-      <p className="text-sm text-gray-500">ID: {task.id}</p>
-      <p className="text-sm mt-2">{task.description}</p>
-      <p className="text-xs text-gray-400 mt-1">
+    <div className={`bg-white p-4 rounded-lg shadow mb-4 border-l-4 relative ${borderColor}`}>
+      <h3 className="font-semibold text-md break-words truncate">{task.name}</h3>
+      <p className="text-sm text-gray-500 break-words truncate">ID: {task.id}</p>
+      <p className="text-sm mt-2 break-words">{task.description}</p>
+      <p className="text-xs text-gray-400 mt-1 break-words">
         Assignee: {task.assignee} | Due: {task.dueDate} | Priority: {task.priority}
       </p>
-      
+
       {/* Show requested status if it exists */}
       {task.requestedStatus && (
-        <p className="text-red-600 mt-1 text-sm font-semibold">
+        <p className="text-red-600 mt-1 text-sm font-semibold break-words">
           Requested: {task.requestedStatus}
         </p>
       )}
@@ -47,7 +57,9 @@ const TaskCard: React.FC<TaskTicketProps> = ({ task, onEdit, onDelete }) => {
           onClick={() => onDelete(task.id)}
         >
           <div className="translate-y-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#FF0000" viewBox="0 0 256 256"><path d="M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm96,168H64V64H192ZM112,104v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm48,0v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Z"></path></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#FF0000" viewBox="0 0 256 256">
+              <path d="M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm96,168H64V64H192ZM112,104v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm48,0v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Z"></path>
+            </svg>
           </div>
         </button>
       )}

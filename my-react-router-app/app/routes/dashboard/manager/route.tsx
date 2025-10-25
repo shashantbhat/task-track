@@ -32,6 +32,8 @@ const ManagerDashboard = () => {
   const [showFilterPopover, setShowFilterPopover] = useState(false);
   const [filterField, setFilterField] = useState("assignee");
   const [filterValue, setFilterValue] = useState("");
+  const [greeting, setGreeting] = useState("");
+  const [managerName, setManagerName] = useState("");
 
   const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -49,6 +51,21 @@ const ManagerDashboard = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+   useEffect(() => {
+      const users = JSON.parse(localStorage.getItem("users") || "[]");
+      const currentUserEmail = localStorage.getItem("currentUserEmail"); // email of logged-in dev
+      const currentUser = users.find((u: any) => u.email === currentUserEmail);
+  
+      if (currentUser) {
+        setManagerName(currentUser.username);
+      }
+  
+      const hour = new Date().getHours();
+      if (hour < 12) setGreeting("Good Morning");
+      else if (hour < 18) setGreeting("Good Afternoon");
+      else setGreeting("Good Evening");
+    }, []);
 
   const saveTasks = (updatedTasks: Task[]) => {
     setTasks(updatedTasks);
@@ -99,6 +116,11 @@ const ManagerDashboard = () => {
           <p className="text-gray-500">Select a project to see the dashboard</p>
         ) : (
           <>
+            <div className="mb-4">
+              <h2 className="text-2xl font-bold">
+                {greeting}, {managerName}
+              </h2>
+            </div>
             <div className="flex justify-between">
               <h1 className="text-3xl font-bold mb-6">{currentProject.name}</h1>
               <Link

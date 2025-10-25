@@ -15,40 +15,42 @@ const Hero = () => {
   ];
 
   const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
+  e.preventDefault();
+  setError("");
 
-    // 1️⃣ Check hardcoded users first
-    const hardcodedUser = hardcodedUsers.find(
-      (u) => u.username === username && u.password === password
+  // 1️⃣ Check hardcoded users first
+  const hardcodedUser = hardcodedUsers.find(
+    (u) => u.username === username && u.password === password
+  );
+  if (hardcodedUser) {
+    localStorage.setItem("currentUserEmail", hardcodedUser.username); // store logged-in user
+    navigate(
+      hardcodedUser.role === "developer"
+        ? "/dashboard/developer"
+        : "/dashboard/manager"
     );
-    if (hardcodedUser) {
-      navigate(
-        hardcodedUser.role === "developer"
-          ? "/dashboard/developer"
-          : "/dashboard/manager"
-      );
-      return;
-    }
+    return;
+  }
 
-    // 2️⃣ Check localStorage users
-    const localUsers = localStorage.getItem("users")
-      ? JSON.parse(localStorage.getItem("users")!)
-      : [];
-    const localUser = localUsers.find(
-      (u: any) => u.username === username && u.password === password
+  // 2️⃣ Check localStorage users
+  const localUsers = localStorage.getItem("users")
+    ? JSON.parse(localStorage.getItem("users")!)
+    : [];
+  const localUser = localUsers.find(
+    (u: any) => u.username === username && u.password === password
+  );
+
+  if (localUser) {
+    localStorage.setItem("currentUserEmail", localUser.email || localUser.username); // store logged-in user
+    navigate(
+      localUser.role === "developer"
+        ? "/dashboard/developer"
+        : "/dashboard/manager"
     );
-
-    if (localUser) {
-      navigate(
-        localUser.role === "developer"
-          ? "/dashboard/developer"
-          : "/dashboard/manager"
-      );
-    } else {
-      setError("Invalid username or password");
-    }
-  };
+  } else {
+    setError("Invalid username or password");
+  }
+};
 
   return (
     <section className="min-h-screen flex flex-col items-center justify-center text-black px-6 relative">
@@ -57,7 +59,7 @@ const Hero = () => {
           Track, Manage & Fix Bugs — Smarter
         </h1>
         <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-          <span className="font-semibold text-black">FealtyX</span> helps developers and
+          <span className="font-semibold text-black">Tasker</span> helps developers and
           managers collaborate efficiently, track issues, and ship better code.
           Connect your GitHub repo to streamline your workflow.
         </p>
@@ -112,7 +114,7 @@ const Hero = () => {
                 ✕
               </button>
 
-              <h2 className="text-2xl font-bold mb-6">Login to FealtyX</h2>
+              <h2 className="text-2xl font-bold mb-6">Login to Tasker</h2>
 
               <form onSubmit={handleLogin} className="space-y-4">
                 <input

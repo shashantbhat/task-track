@@ -1,5 +1,5 @@
 // components/AddTaskModal.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
 interface AddTaskModalProps {
@@ -30,6 +30,17 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
   const [dueDate, setDueDate] = useState(taskToEdit?.dueDate || "");
   const [priority, setPriority] = useState(taskToEdit?.priority || "Medium");
   const [status, setStatus] = useState(taskToEdit?.status || "Backlog");
+  const [developers, setDevelopers] = useState<{id:string,name:string}[]>([]);
+
+  // Load developers from localStorage
+  useEffect(() => {
+    const usersStr = localStorage.getItem("users");
+    if (usersStr) {
+      const users = JSON.parse(usersStr);
+      const devs = users.filter((u: any) => u.role === "developer");
+      setDevelopers(devs);
+    }
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,14 +81,19 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
             onChange={(e) => setDescription(e.target.value)}
             required
           />
-          <input
-            type="text"
-            placeholder="Assignee"
+         <select
             className="w-full border px-4 py-2 rounded-lg"
             value={assignee}
             onChange={(e) => setAssignee(e.target.value)}
             required
-          />
+          >
+            <option value="">Select Assignee</option>
+            {developers.map((dev) => (
+              <option key={dev.email} value={dev.username}>
+                {dev.username}
+              </option>
+            ))}
+          </select>
           <input
             type="date"
             className="w-full border px-4 py-2 rounded-lg"
