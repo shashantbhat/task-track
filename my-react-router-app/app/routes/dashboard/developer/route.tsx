@@ -245,7 +245,7 @@ const DeveloperDashboard = () => {
             </div>
 
             <button
-              className="mb-6 bg-blue-600 text-white px-4 py-2 rounded-lg"
+              className="mb-6 bg-black text-white px-4 py-2 rounded-lg"
               onClick={() => setShowModal(true)}
             >
               Add Task

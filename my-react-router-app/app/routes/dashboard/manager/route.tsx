@@ -96,8 +96,14 @@ const ManagerDashboard = () => {
   };
 
   const addTask = (task: Task) => {
-    saveTasks([...tasks, task]);
+  const newTask: Task = {
+    ...task,
+    timerStart: Date.now(),
+    timeSpent: 0,
   };
+  saveTasks([...tasks, newTask]);
+};
+
 
   const deleteTask = (taskId: string | number) => {
     const updatedTasks = tasks.filter((t) => t.id !== taskId);
@@ -105,23 +111,43 @@ const ManagerDashboard = () => {
     };
 
   const updateTask = (task: Task) => {
-    let updatedTask = { ...task };
+    const oldTask = tasks.find((t) => t.id === task.id);
+    if (!oldTask) return;
 
-    // If manager is approving a previously requested status
+    let updatedTask: Task = { ...task };
+
+    // Manager approves previously requested status
     if (task.requestedStatus && (task.status === "Done" || task.status === "Cancelled")) {
-        updatedTask.requestedStatus = ""; // clear the pending request
-        alert(`Task status updated to ${task.status}.`);
-    }
+      // Stop timer if not already stopped
+      const elapsed = oldTask.timerStart
+        ? Math.floor((Date.now() - oldTask.timerStart) / 1000)
+        : oldTask.timeSpent || 0;
 
-    if (task.status === "Done" || task.status === "Cancelled") {
-        if (task.requestedStatus && (task.status === "Done" || task.status === "Cancelled")) {
-            updatedTask.timerStart = null; // stop timer
-        }
-    }
-
-    const newTasks = tasks.map((t) => (t.id === task.id ? updatedTask : t));
-    saveTasks(newTasks);
+      updatedTask = {
+        ...task,
+        status: task.status, // manager sets actual status
+        requestedStatus: null, // clear request
+        timeSpent: elapsed,
+        timerStart: null, // stop timer
     };
+
+    alert(`Task status updated to "${task.status}".`);
+  } else {
+    // Normal update
+    // Resume timer if previously stopped (like reactivating task)
+    if ((oldTask.status === "Done" || oldTask.status === "Cancelled") && task.status !== "Done" && task.status !== "Cancelled") {
+      updatedTask.timerStart = Date.now() - (oldTask.timeSpent || 0) * 1000;
+    }
+    // Keep timeSpent if timer running
+    else if (oldTask.timerStart) {
+      const elapsed = Math.floor((Date.now() - oldTask.timerStart) / 1000);
+      updatedTask.timeSpent = elapsed;
+    }
+  }
+
+  const newTasks = tasks.map((t) => (t.id === task.id ? updatedTask : t));
+  saveTasks(newTasks);
+};
 
   const filteredTasks = tasks.filter((task) => {
     if (task.projectId !== currentProject?.id) return false;
@@ -204,7 +230,7 @@ const ManagerDashboard = () => {
             </div>
 
             <button
-              className="mb-6 bg-blue-600 text-white px-4 py-2 rounded-lg"
+              className="mb-6 bg-black text-white px-4 py-2 rounded-lg"
               onClick={() => setShowModal(true)}
             >
               Add Task
