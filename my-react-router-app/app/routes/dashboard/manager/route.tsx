@@ -15,8 +15,10 @@ interface Task {
   dueDate: string;
   priority: string;
   status: string;
+  requestedStatus?: string | null;
   projectId: string;
-  requestedStatus?: string;
+  timeSpent?: number; // total time in seconds
+  timerStart?: number | null; // timestamp when timer started
 }
 
 const filterFields = ["assignee", "priority", "status"];
@@ -51,6 +53,27 @@ const ManagerDashboard = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+  const interval = setInterval(() => {
+    setTasks((prevTasks) =>
+      prevTasks.map((task) => {
+        if (
+          task.status !== "Done" &&
+          task.status !== "Cancelled" &&
+          task.timerStart
+        ) {
+          const now = Date.now();
+          const elapsed = Math.floor((now - task.timerStart) / 1000);
+          return { ...task, timeSpent: elapsed };
+        }
+        return task;
+      })
+    );
+  }, 1000); // update every second
+
+  return () => clearInterval(interval);
+}, []);
 
    useEffect(() => {
       const users = JSON.parse(localStorage.getItem("users") || "[]");
@@ -88,6 +111,12 @@ const ManagerDashboard = () => {
     if (task.requestedStatus && (task.status === "Done" || task.status === "Cancelled")) {
         updatedTask.requestedStatus = ""; // clear the pending request
         alert(`Task status updated to ${task.status}.`);
+    }
+
+    if (task.status === "Done" || task.status === "Cancelled") {
+        if (task.requestedStatus && (task.status === "Done" || task.status === "Cancelled")) {
+            updatedTask.timerStart = null; // stop timer
+        }
     }
 
     const newTasks = tasks.map((t) => (t.id === task.id ? updatedTask : t));

@@ -16,8 +16,10 @@ interface Task {
   dueDate: string;
   priority: string;
   status: string;
-  projectId: string;
   requestedStatus?: string | null;
+  projectId: string;
+  timeSpent?: number;
+  timerStart?: number | null;
 }
 
 const filterFields = ["assignee", "priority", "status"];
@@ -38,11 +40,13 @@ const DeveloperDashboard = () => {
 
   const popoverRef = useRef<HTMLDivElement>(null);
 
+  // 🟢 Load saved tasks on mount
   useEffect(() => {
     const savedTasks = localStorage.getItem("devTasks");
     if (savedTasks) setTasks(JSON.parse(savedTasks));
   }, []);
 
+  // 🟢 Handle clicking outside filter
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
@@ -53,9 +57,34 @@ const DeveloperDashboard = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // 🕒 Persistent timer updater
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTasks((prevTasks) => {
+        const updated = prevTasks.map((task) => {
+          if (
+            task.status !== "Done" &&
+            task.status !== "Cancelled" &&
+            task.timerStart
+          ) {
+            const now = Date.now();
+            const elapsed = Math.floor((now - task.timerStart) / 1000);
+            return { ...task, timeSpent: elapsed };
+          }
+          return task;
+        });
+        localStorage.setItem("devTasks", JSON.stringify(updated));
+        return updated;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // 🟢 Greeting + current user
   useEffect(() => {
     const users = JSON.parse(localStorage.getItem("users") || "[]");
-    const currentUserEmail = localStorage.getItem("currentUserEmail"); // email of logged-in dev
+    const currentUserEmail = localStorage.getItem("currentUserEmail");
     const currentUser = users.find((u: any) => u.email === currentUserEmail);
 
     if (currentUser) {
@@ -68,55 +97,85 @@ const DeveloperDashboard = () => {
     else setGreeting("Good Evening");
   }, []);
 
+  // 🟢 Save tasks
   const saveTasks = (updatedTasks: Task[]) => {
     setTasks(updatedTasks);
     localStorage.setItem("devTasks", JSON.stringify(updatedTasks));
   };
 
+  // 🆕 Add Task — starts timer immediately
   const addTask = (task: Task) => {
-    saveTasks([...tasks, task]);
+    const newTask = {
+      ...task,
+      timerStart: Date.now(),
+      timeSpent: 0,
+    };
+    saveTasks([...tasks, newTask]);
   };
 
-  const updateTask = (task: Task) => {
-    const oldTask = tasks.find((t) => t.id === task.id);
-    let updatedTask = { ...task };
+  // 📝 Update Task — preserve / stop / resume timer
+ const updateTask = (task: Task) => {
+  const oldTask = tasks.find((t) => t.id === task.id);
+  if (!oldTask) return;
 
-    if (oldTask && oldTask.status !== task.status) {
-      // Developer trying to mark task as Done or Cancelled
-      if (task.status === "Done" || task.status === "Cancelled") {
-        updatedTask = {
-          ...task,
-          status: "Under Review", // actual status shown to developer
-          requestedStatus: task.status, // store requested status for manager
-        };
-        alert(
-          `Your request to mark this task as "${task.status}" has been recorded and sent for review.`
-        );
+  let updatedTask: Task = { ...task };
+
+  // If status changed
+  if (oldTask.status !== task.status) {
+    // Developer requests Done or Cancelled
+    if (task.status === "Done" || task.status === "Cancelled") {
+      const elapsed = oldTask.timerStart
+        ? Math.floor((Date.now() - oldTask.timerStart) / 1000)
+        : oldTask.timeSpent || 0;
+
+      updatedTask = {
+        ...task,
+        status: "Under Review", // show Under Review to developer
+        requestedStatus: task.status, // record request for manager
+        timeSpent: elapsed, // stop timer
+        timerStart: null,
+      };
+
+      alert(
+        `Your request to mark this task as "${task.status}" has been recorded and sent for review.`
+      );
+    } else {
+      // Status changed to something other than Done/Cancelled
+      // Resume timer if previously stopped
+      if (oldTask.status === "Done" || oldTask.status === "Cancelled") {
+        updatedTask.timerStart = Date.now() - (oldTask.timeSpent || 0) * 1000;
       }
+      // Clear requestedStatus because it's no longer pending
+      updatedTask.requestedStatus = null;
     }
+  } else {
+    // Status did not change, just update other fields
+    updatedTask = { ...oldTask, ...task };
+  }
 
-    const newTasks = tasks.map((t) => (t.id === task.id ? updatedTask : t));
-    saveTasks(newTasks);
-  };
+  const newTasks = tasks.map((t) => (t.id === task.id ? updatedTask : t));
+  saveTasks(newTasks);
+};
 
+  // 🗑 Delete Task
   const deleteTask = (taskId: string | number) => {
     const updatedTasks = tasks.filter((t) => t.id !== taskId);
     saveTasks(updatedTasks);
   };
 
+  // 🔍 Filter + Search
   const filteredTasks = tasks.filter((task) => {
     if (task.projectId !== currentProject?.id) return false;
-
     const matchesName = task.name.toLowerCase().includes(searchValue.toLowerCase());
     let matchesFilter = true;
     if (filterValue) {
       const fieldValue = (task as any)[filterField]?.toLowerCase() || "";
       matchesFilter = fieldValue.includes(filterValue.toLowerCase());
     }
-
     return matchesName && matchesFilter;
   });
 
+  // 🧱 UI
   return (
     <div className="flex h-screen">
       <DeveloperSidebar onSelectProject={(project) => setCurrentProject(project)} />
@@ -131,6 +190,7 @@ const DeveloperDashboard = () => {
                 {greeting}, {developerName}
               </h2>
             </div>
+
             <div className="flex justify-between">
               <h1 className="text-3xl font-bold mb-6">{currentProject.name}</h1>
               <Link
@@ -191,6 +251,7 @@ const DeveloperDashboard = () => {
               Add Task
             </button>
 
+            {/* Columns */}
             <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
               {columns.map((col) => (
                 <div key={col} className="bg-gray-100 p-4 rounded-lg min-h-full">
@@ -203,20 +264,18 @@ const DeveloperDashboard = () => {
                         task={task}
                         onEdit={() => setEditingTask(task)}
                         onDelete={deleteTask}
-                        // Pass requestedStatus so it can show in red
                       />
                     ))}
                 </div>
               ))}
             </div>
 
-            {/* Add / Edit Task Modals */}
+            {/* Modals */}
             {showModal && (
               <AddTaskModal
                 projectId={currentProject.id}
                 onClose={() => setShowModal(false)}
                 onAddTask={addTask}
-                // userRole="developer"
               />
             )}
             {editingTask && (
@@ -225,7 +284,6 @@ const DeveloperDashboard = () => {
                 onClose={() => setEditingTask(null)}
                 onAddTask={updateTask}
                 taskToEdit={editingTask}
-                // userRole="developer"
               />
             )}
           </>
